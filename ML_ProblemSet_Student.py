@@ -95,31 +95,75 @@ X_train, X_val, Y_train, Y_val = train_test_split(
 
 # --- OLS Regression ---
 
+ols = LinearRegression()
+ols.fit(X_train, Y_train)
+
 # --- Weighted Linear Regression ---
-   
+
+weights = np.random.rand(len(Y_train))
+ols_weighted = LinearRegression()
+ols_weighted.fit(X_train, Y_train, sample_weight=weights)   
 
 # --- Huber Regressor ---
 
+huber = HuberRegressor()
+huber.fit(X_train, Y_train)
 
 # --- ElasticNet Model Tuning ---
-           
+
+elastic = ElasticNet(alpha=0.1, l1_ratio=0.5)
+elastic.fit(X_train, Y_train)           
 
 # --- Principal Component Regression (PCR) ---
 
+pca = PCA(n_components=5)
+X_train_pca = pca.fit_transform(X_train)
+X_test_pca = pca.transform(X_test)
+pcr = LinearRegression()
+pcr.fit(X_train_pca, Y_train)
+Y_pred_pcr = pcr.predict(X_test_pca)
 
 # --- Partial Least Squares Regression (PLS) ---
 
+pls = PLSRegression(n_components=5)
+pls.fit(X_train, Y_train)
 
 
 # --- Generalized Linear Model (Spline Transformation + ElasticNet) ---
+
+spline = SplineTransformer(n_knots=4, degree=3)
+X_train_spline = spline.fit_transform(X_train[:, [0]])
+X_test_spline = spline.transform(X_test[:, [0]])
+X_train_glm = np.hstack([X_train_spline, X_train[:, 1:]])
+X_test_glm = np.hstack([X_test_spline, X_test[:, 1:]])
+glm = ElasticNet(alpha=0.1, l1_ratio=0.5)
+glm.fit(X_train_glm, Y_train)
+Y_pred_glm = glm.predict(X_test_glm)
 
 # --- non-linear models ---
 
 # --- Neural Network Model ---
 
+nn_model = tf.keras.Sequential([
+    tf.keras.layers.Dense(32, activation='relu', input_shape=(X_train.shape[1],)),
+    tf.keras.layers.Dense(16, activation='relu'),
+    tf.keras.layers.Dense(1)
+])
+nn_model.compile(optimizer='adam', loss='mse')
+nn_model.fit(X_train, Y_train, epochs=50, batch_size=32, verbose=0, validation_data=(X_val, Y_val))
+Y_pred_nn = nn_model.predict(X_test).flatten()
+
 # --- Gradient Boosting Regressor ---
 
+gbr = GradientBoostingRegressor()
+gbr.fit(X_train, Y_train)
+Y_pred_gbr = gbr.predict(X_test)
+
 # --- Random Forest Regressor ---
+
+rf = RandomForestRegressor()
+rf.fit(X_train, Y_train)
+Y_pred_rf = rf.predict(X_test)
 
 
 # -------------------------------
