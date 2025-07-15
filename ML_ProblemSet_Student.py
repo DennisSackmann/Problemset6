@@ -118,10 +118,8 @@ elastic.fit(X_train, Y_train)
 
 pca = PCA(n_components=5)
 X_train_pca = pca.fit_transform(X_train)
-X_test_pca = pca.transform(X_test)
 pcr = LinearRegression()
 pcr.fit(X_train_pca, Y_train)
-Y_pred_pcr = pcr.predict(X_test_pca)
 
 # --- Partial Least Squares Regression (PLS) ---
 
@@ -133,12 +131,9 @@ pls.fit(X_train, Y_train)
 
 spline = SplineTransformer(n_knots=4, degree=3)
 X_train_spline = spline.fit_transform(X_train[:, [0]])
-X_test_spline = spline.transform(X_test[:, [0]])
 X_train_glm = np.hstack([X_train_spline, X_train[:, 1:]])
-X_test_glm = np.hstack([X_test_spline, X_test[:, 1:]])
 glm = ElasticNet(alpha=0.1, l1_ratio=0.5)
 glm.fit(X_train_glm, Y_train)
-Y_pred_glm = glm.predict(X_test_glm)
 
 # --- non-linear models ---
 
@@ -151,24 +146,37 @@ nn_model = tf.keras.Sequential([
 ])
 nn_model.compile(optimizer='adam', loss='mse')
 nn_model.fit(X_train, Y_train, epochs=50, batch_size=32, verbose=0, validation_data=(X_val, Y_val))
-Y_pred_nn = nn_model.predict(X_test).flatten()
 
 # --- Gradient Boosting Regressor ---
 
 gbr = GradientBoostingRegressor()
 gbr.fit(X_train, Y_train)
-Y_pred_gbr = gbr.predict(X_test)
 
 # --- Random Forest Regressor ---
 
 rf = RandomForestRegressor()
 rf.fit(X_train, Y_train)
-Y_pred_rf = rf.predict(X_test)
 
 
 # -------------------------------
 # Part 4: Prediction Wrappers
 # -------------------------------
+
+def predict_all_models(X):
+        return {
+        'OLS': ols.predict(X),
+        'Weighted OLS': ols_weighted.predict(X),
+        'Huber': huber.predict(X),
+        'ElasticNet': elastic.predict(X),
+        'PCR': pcr.predict(pca.transform(X)),
+        'PLS': pls.predict(X).flatten(),
+        'GLM': glm.predict(np.hstack([spline.transform(X[:, [0]]), X[:, 1:]])),
+        'NN': nn_model.predict(X).flatten(),
+        'GBR': gbr.predict(X),
+        'RF': rf.predict(X)
+    }
+
+prediction = predict_all_models(X_test)
 
 # -------------------------------
 # Part 5: Full-Sample Time Series Plots - to see the predictions vs. actuals
