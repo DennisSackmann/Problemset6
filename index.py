@@ -247,7 +247,6 @@ for name, r2 in r2_results.items():
 # Part 7: Diebold-Mariano Test Statistics - to compare model predictions
 # -------------------------------
 
-from statsmodels.stats.diagnostic import acorr_ljungbox
 def diebold_mariano_test(Y_true, pred1, pred2):
     e1 = Y_true - pred1
     e2 = Y_true - pred2

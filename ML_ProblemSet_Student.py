@@ -17,6 +17,7 @@ from sklearn.decomposition import PCA  # Import PCA for dimensionality reduction
 from sklearn.cross_decomposition import PLSRegression  # Import PLSRegression for partial least squares regression
 from sklearn.preprocessing import SplineTransformer  # Import SplineTransformer for spline feature transformation
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor  # Import ensemble regression models
+from scipy.stats import t # Import t-distribution for statistical tests
 
 plt.style.use('seaborn-v0_8-whitegrid')  # Set the plotting style to Seaborn whitegrid
 plt.rcParams['figure.figsize'] = (12, 8)  # Set default figure size for plots to 12x8 inches
@@ -201,7 +202,7 @@ def plot_timeseries_per_model(Y_true, models):
     plt.savefig("images/TSPerModel.png")
     plt.close()
 
-plot_timeseries_per_model(Y_test, prediction)
+#plot_timeseries_per_model(Y_test, prediction)
 
 # -------------------------------
 # Part 6: Out-of-Sample R² Results Table - to evaluate model performance
@@ -219,6 +220,69 @@ df_r2 = pd.DataFrame.from_dict(r2_results, orient='index', columns=['R²']).to_c
 # -------------------------------
 # Part 7: Diebold-Mariano Test Statistics - to compare model predictions
 # -------------------------------
+
+def diebold_mariano_test(Y_true, pred1, pred2):
+    e1 = Y_true - pred1
+    e2 = Y_true - pred2
+    diff = e1 ** 2 - e2 ** 2
+    dm_statistic = np.mean(diff) / np.sqrt(np.var(diff) / len(Y_true))
+    p_value = 2 * (1 - t.cdf(np.abs(dm_statistic), df=len(diff)-1))
+    return dm_statistic, p_value
+
+def compare_models(Y_true, predictions):
+    df_diebold_mariano = pd.DataFrame(columns=['Model1', 'Model2', 'DM Statistic', 'p-value'])
+    model_names = list(predictions.keys())
+    for i in range(len(model_names)):
+        for j in range(len(model_names)):
+            model1 = model_names[i]
+            model2 = model_names[j]
+            dm_statistic, p_value = diebold_mariano_test(Y_true, predictions[model1], predictions[model2])
+            df_diebold_mariano = df_diebold_mariano._append({
+                'Model1': model1,
+                'Model2': model2,
+                'DM Statistic': dm_statistic,
+                'p-value': p_value
+            }, ignore_index=True)
+    return df_diebold_mariano
+
+df_diebold_mariano = compare_models(Y_test, prediction).to_csv("data/diebold_mariano_results.csv", index=False)
+
+# Build a heatmap based on Diebold-Mariano results
+
+# Load results from CSV
+df_dm = pd.read_csv("data/diebold_mariano_results.csv")
+
+# Pivot to matrix form
+heatmap_matrix = np.empty((len(df_dm['Model1'].unique()), len(df_dm['Model2'].unique())), dtype=object)
+model_names = df_dm['Model1'].unique()
+
+for i, m1 in enumerate(model_names):
+    for j, m2 in enumerate(model_names):
+        row = df_dm[(df_dm['Model1'] == m1) & (df_dm['Model2'] == m2)]
+        pval = row['p-value'].values[0]
+        dmstat = row['DM Statistic'].values[0]
+        if pval > 0.05:
+            heatmap_matrix[i, j] = 'yellow'
+        elif pval <= 0.05 and dmstat < 0:
+            heatmap_matrix[i, j] = 'green'
+        else:
+            heatmap_matrix[i, j] = 'red'
+
+# Convert color matrix to numeric for plotting
+color_map = {'yellow': 0, 'green': 1, 'red': 2}
+numeric_matrix = np.vectorize(color_map.get)(heatmap_matrix)
+
+# Plot heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(numeric_matrix, annot=False, cmap=sns.color_palette(['yellow', 'green', 'red']), 
+            xticklabels=model_names, yticklabels=model_names, cbar=False)
+plt.title('Diebold-Mariano Test Heatmap')
+plt.xlabel('Model 2')
+plt.ylabel('Model 1')
+plt.tight_layout()
+plt.savefig("images/diebold_mariano_heatmap.png")
+
+
 # -------------------------------
 # Part 8: Variable Importance Calculations & Heatmaps - to understand feature importance ( to see which features are more important)
 # -------------------------------
