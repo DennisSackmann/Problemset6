@@ -287,6 +287,44 @@ plt.savefig("images/diebold_mariano_heatmap.png")
 # Part 8: Variable Importance Calculations & Heatmaps - to understand feature importance ( to see which features are more important)
 # -------------------------------
 # TODO: Define a function to compute variable importance based on the drop in R² when a feature is removed
+
+def variable_importance_all_models(X, Y):
+    """
+    For each variable, remove it from X, run predict_all_models, and save the drop in R² for each model.
+    Returns a DataFrame with shape (n_features, n_models) containing the drop in R².
+    """
+    base_pred = predict_all_models(X)
+    base_r2 = {name: calc_r2(Y, pred) for name, pred in base_pred.items()}
+    importances = {}
+    for i in range(X.shape[1]):
+        X_zerod = X.copy()
+        X_zerod[:, i] = 0
+        pred_drop = predict_all_models(X_zerod)
+        r2_drop = {name: calc_r2(Y, pred) for name, pred in pred_drop.items()}
+        # Importance: drop in R² when feature i is removed
+        importances[f'Var{i+1}'] = {name: base_r2[name] - r2_drop[name] for name in base_r2}
+    return pd.DataFrame(importances).T  # rows: variables, columns: models
+
+# Calculate and plot variable importance for all models
+imp_all = variable_importance_all_models(X_test, Y_test)
+imp_all.to_csv("data/variable_importance_all_models.csv")
+sns.heatmap(imp_all, annot=True, cmap='viridis', xticklabels=imp_all.columns, yticklabels=imp_all.index)
+plt.title('Variable Importance (Drop in R²) for All Models')
+plt.tight_layout()
+plt.savefig("images/variable_importance_all_models.png")
+
+for col in imp_all.columns:
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(imp_all[[col]].T, annot=True, cmap="viridis", cbar=True, fmt=".4f")
+    plt.title(f'Variable Importance for {col}')
+    plt.xlabel('Variables')
+    plt.ylabel('Drop in R²')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(f"images/variable_importance_{col}.png")
+    plt.close()
+
+    
 # -------------------------------
 # -------------------------------
 # Part 9: Auxiliary Functions and Decile Portfolio Analysis - to analyze model performance across deciles - to compare predicted vs actual  sharpe ratios
