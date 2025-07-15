@@ -33,12 +33,42 @@ np.random.seed(42)  # Set the random seed for reproducibility
 stock_characteristics = np.random.rand(n_stocks, n_months, n_characteristics)  # Generate random stock characteristic data
 macro_factors = np.random.rand(n_months, n_macro_factors)  # Generate random macroeconomic factor data
 
+
 # generate true coefficients
 true__betas = np.random.randn(n_characteristics)
 true_gammas = np.random.randn(n_macro_factors)
 
 # generate returns
+noise = np.random.normal(0, 0.5, (n_stocks, n_months))
+ri_t = np.zeros((n_stocks, n_months))
+for i in range(n_stocks):
+    for j in range(n_months):
+        ri_t[i, j] = (
+            stock_characteristics[i, j, :] @ true__betas
+            + macro_factors[j, :] @ true_gammas
+            + noise[i, j]
+        )
 
+'''# plot the return series for every stock
+n_rows = int(np.ceil(n_stocks / 2))
+fig, axes = plt.subplots(n_rows, 2, figsize=(10, 2 * n_rows), sharex=True)
+axes = axes.flatten()
+for i in range(n_stocks):
+    axes[i].plot(ri_t[i, :], label=f'Stock {i+1}')
+    axes[i].set_ylabel('Return')
+    axes[i].set_title(f'Return Series: Stock {i+1}')
+    axes[i].legend()
+for j in range(n_stocks, len(axes)):
+    axes[j].axis('off')
+plt.tight_layout()
+plt.show()'''
+
+# flatten data for modeling
+zi_t_flattened = stock_characteristics.reshape(-1, n_characteristics)
+xi_t_flattened = np.repeat(macro_factors, n_stocks, axis=0)
+ri_t_flattened = ri_t.flatten()
+X_full = np.hstack([zi_t_flattened, xi_t_flattened])
+Y_full = ri_t_flattened
 
 
 # -------------------------------
@@ -46,7 +76,18 @@ true_gammas = np.random.randn(n_macro_factors)
 # -------------------------------
 # TODO: Split zi_t_flattened and ri_t_flattened into a training-validation set and a test set (with test set proportion of 0.3)
 
+# split into training-validation and test sets
+X_trainval, X_test, Y_trainval, Y_test = train_test_split(
+    X_full, Y_full, test_size=0.3, random_state=42
+)
+
 # TODO: Further divide the training-validation set into a training set and a validation set (with a validation set proportion of approximately 0.2857)
+
+# split training-validation set into training and validation sets
+X_train, X_val, Y_train, Y_val = train_test_split(
+    X_trainval, Y_trainval, test_size=0.2857, random_state=42
+)
+
 
 # -------------------------------
 # Part 3: Model Training Section

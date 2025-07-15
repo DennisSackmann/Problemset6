@@ -33,6 +33,8 @@ np.random.seed(42)  # Set the random seed for reproducibility
 stock_characteristics = np.random.rand(n_stocks, n_months, n_characteristics)  # Generate random stock characteristic data
 macro_factors = np.random.rand(n_months, n_macro_factors)  # Generate random macroeconomic factor data
 
+print(stock_characteristics)
+
 # Generate true coefficients for characteristics and macro factors
 true_betas = np.random.randn(n_characteristics)
 true_gammas = np.random.randn(n_macro_factors)
@@ -54,6 +56,7 @@ xi_t_flattened = np.repeat(macro_factors, n_stocks, axis=0)
 ri_t_flattened = ri_t.flatten()
 X_full = np.hstack([zi_t_flattened, xi_t_flattened])
 Y_full = ri_t_flattened
+
 
 
 # -------------------------------
