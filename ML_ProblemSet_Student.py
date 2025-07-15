@@ -329,3 +329,33 @@ for col in imp_all.columns:
 # -------------------------------
 # Part 9: Auxiliary Functions and Decile Portfolio Analysis - to analyze model performance across deciles - to compare predicted vs actual  sharpe ratios
 # -------------------------------
+
+def decile_portfolio_analysis(Y_true, Y_pred):
+    df = pd.DataFrame({'Actual': Y_true, 'Predicted': Y_pred})
+    df['Decile'] = pd.qcut(df['Predicted'], 10, labels=False)
+    results = df.groupby('Decile').agg({'Actual': ['mean', 'std'], 'Predicted': ['mean', 'std']})
+    results['Sharpe_Actual'] = results['Actual']['mean'] / results['Actual']['std']
+    results['Sharpe_Predicted'] = results['Predicted']['mean'] / results['Predicted']['std']
+    return results
+
+def plot_pred_vs_actual(results_df, name):
+    plt.figure(figsize=(10, 6))
+    actual = results_df['Actual']['mean']
+    predicted = results_df['Predicted']['mean']
+    
+    plt.plot(actual.index, actual.values, marker='o', label='Tatsächliche Rendite')
+    plt.plot(predicted.index, predicted.values, marker='x', label='Vorhergesagte Rendite')
+    
+    plt.title(f"Vorhergesagte vs. tatsächliche Renditen pro Dezil für {name}")
+    plt.xlabel("Dezil (nach Prognose sortiert)")
+    plt.ylabel("Durchschnittliche Rendite")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"images/pred_vs_actual_{name}.png")
+
+
+for name in list(prediction.keys()):
+    df_decile = decile_portfolio_analysis(Y_test, prediction[name])
+    df_decile.to_csv(f"data/decile_analysis_{name}.csv")
+    plot_pred_vs_actual(df_decile, name)

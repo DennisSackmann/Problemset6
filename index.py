@@ -293,8 +293,8 @@ def decile_portfolio_analysis(Y_true, Y_pred):
     results = df.groupby('Decile').agg({'Actual': ['mean', 'std'], 'Predicted': ['mean', 'std']})
     results['Sharpe_Actual'] = results['Actual']['mean'] / results['Actual']['std']
     results['Sharpe_Predicted'] = results['Predicted']['mean'] / results['Predicted']['std']
-    print(results[['Sharpe_Actual', 'Sharpe_Predicted']])
+    return results
 
 # Example: decile analysis for OLS
 print("Performing Decile Portfolio Analysis for OLS")
-decile_portfolio_analysis(Y_test, Y_pred_ols)
+print(decile_portfolio_analysis(Y_test, Y_pred_ols))
