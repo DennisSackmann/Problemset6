@@ -61,7 +61,7 @@ for i in range(n_stocks):
 for j in range(n_stocks, len(axes)):
     axes[j].axis('off')
 plt.tight_layout()
-plt.show()'''
+plt.savefig("images/ReturnTimeSeriesAll.png")'''
 
 # flatten data for modeling
 zi_t_flattened = stock_characteristics.reshape(-1, n_characteristics)
@@ -181,6 +181,26 @@ prediction = predict_all_models(X_test)
 # -------------------------------
 # Part 5: Full-Sample Time Series Plots - to see the predictions vs. actuals
 # -------------------------------
+
+# plot timeseries for each model
+def plot_timeseries_per_model(Y_true, models):
+    n_models = len(models)
+    n_cols = 2
+    n_rows = int(np.ceil(n_models / n_cols))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(14, 4 * n_rows), sharex=True)
+    axes = axes.flatten()
+    for idx, (name, pred) in enumerate(models.items()):
+        ax = axes[idx]
+        ax.plot(Y_true, label='Actual')
+        ax.plot(pred, label='Predicted')
+        ax.set_title(f'{name} Predictions vs Actuals')
+        ax.legend()
+    for j in range(idx + 1, len(axes)):
+        axes[j].axis('off')
+    plt.tight_layout()
+    plt.savefig("images/TSPerModel.png")
+
+plot_timeseries_per_model(Y_test, prediction)
 
 # -------------------------------
 # Part 6: Out-of-Sample R² Results Table - to evaluate model performance

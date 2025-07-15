@@ -209,6 +209,7 @@ def plot_all_predictions(Y_true, models):
         ax = axes[idx]
         ax.plot(Y_true, label='Actual')
         ax.plot(pred, label='Predicted')
+        print(pred.shape)
         ax.set_title(f'{name} Predictions vs Actuals')
         ax.legend()
     # Hide unused subplots
