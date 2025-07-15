@@ -199,6 +199,7 @@ def plot_timeseries_per_model(Y_true, models):
         axes[j].axis('off')
     plt.tight_layout()
     plt.savefig("images/TSPerModel.png")
+    plt.close()
 
 plot_timeseries_per_model(Y_test, prediction)
 
@@ -206,6 +207,14 @@ plot_timeseries_per_model(Y_test, prediction)
 # Part 6: Out-of-Sample R² Results Table - to evaluate model performance
 # -------------------------------
 # TODO: Calculate R² according to the formula: 1 - (sum of squared errors / total sum of squares)
+
+def calc_r2(Y_true, Y_pred):
+     ss_res = np.sum((Y_true - Y_pred) ** 2)
+     ss_tot = np.sum((Y_true - np.mean(Y_true)) ** 2)
+     return 1 - (ss_res / ss_tot)
+
+r2_results = {name: calc_r2(Y_test, pred) for name, pred in prediction.items()}
+df_r2 = pd.DataFrame.from_dict(r2_results, orient='index', columns=['R²']).to_csv("data/r2_results.csv")
 
 # -------------------------------
 # Part 7: Diebold-Mariano Test Statistics - to compare model predictions
