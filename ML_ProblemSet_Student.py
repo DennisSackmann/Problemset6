@@ -198,7 +198,7 @@ def plot_timeseries_per_model(Y_true, models):
     plt.savefig("images/TSPerModel.png")
     plt.close()
 
-#plot_timeseries_per_model(Y_test, prediction)
+plot_timeseries_per_model(Y_test, prediction)
 
 # -------------------------------
 # Part 6: Out-of-Sample R² Results Table - to evaluate model performance
