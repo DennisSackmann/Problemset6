@@ -161,16 +161,16 @@ rf.fit(X_train, Y_train)
 
 def predict_all_models(X):
         return {
-        'OLS': ols.predict(X),
-        'Weighted OLS': ols_weighted.predict(X),
-        'Huber': huber.predict(X),
+        'GBR': gbr.predict(X),
         'ElasticNet': elastic.predict(X),
+        'GLM': glm.predict(np.hstack([spline.transform(X[:, [0]]), X[:, 1:]])),
+        'Huber': huber.predict(X),
+        'NN': nn_model.predict(X).flatten(),
+        'OLS': ols.predict(X),
         'PCR': pcr.predict(pca.transform(X)),
         'PLS': pls.predict(X).flatten(),
-        'GLM': glm.predict(np.hstack([spline.transform(X[:, [0]]), X[:, 1:]])),
-        'NN': nn_model.predict(X).flatten(),
-        'GBR': gbr.predict(X),
-        'RF': rf.predict(X)
+        'RF': rf.predict(X),
+        'Weighted OLS': ols_weighted.predict(X)
     }
 
 prediction = predict_all_models(X_test)
@@ -297,7 +297,6 @@ def variable_importance_all_models(X, Y):
         X_zerod[:, i] = 0
         pred_drop = predict_all_models(X_zerod)
         r2_drop = {name: calc_r2(Y, pred) for name, pred in pred_drop.items()}
-        # Importance: drop in R² when feature i is removed
         importances[f'Var{i+1}'] = {name: base_r2[name] - r2_drop[name] for name in base_r2}
     return pd.DataFrame(importances).T  # rows: variables, columns: models
 
