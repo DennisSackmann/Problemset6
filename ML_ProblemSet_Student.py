@@ -361,35 +361,39 @@ for name in list(prediction.keys()):
 # -------------------------------
 
 
+ols_models = ["OLS", "Weighted OLS", "Huber", "ElasticNet", "PCR", "PLS", "GLM", "NN", "GBR", "RF"]
+
+
 tut_pred = predict_all_models(X_full)
 
-ols_tut_pred = tut_pred['OLS']
+for model in ols_models:
+    model_tut_pred = tut_pred[model]
 
-ols_tut_pred_reshape = ols_tut_pred.reshape(n_stocks, n_months)
-y_reshape = Y_full.reshape(n_stocks, n_months)
-
-
-def plot_ols_preds_per_stock(y_reshape, ols_tut_pred_reshape, n_stocks=10):
-    n_cols = 2
-    n_rows = int(np.ceil(n_stocks / n_cols))
-
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 4 * n_rows), sharex=True, sharey=True)
-    axes = axes.flatten()
-
-    for i in range(n_stocks):
-        ax = axes[i]
-        ax.plot(y_reshape[i], label='Actual', color='blue', marker='o')
-        ax.plot(ols_tut_pred_reshape[i], label='OLS Predicted', color='red', linestyle='--', marker='x')
-        ax.set_title(f'Stock {i+1}')
-        ax.set_xlabel('Months')
-        ax.set_ylabel('Returns')
-        ax.legend()
-        ax.grid(False)
-    for j in range(n_stocks, len(axes)):
-        axes[j].axis('off')
-
-    plt.tight_layout()
-    plt.savefig("images/ols_preds_all_stocks.png")
+    ols_tut_pred_reshape = model_tut_pred.reshape(n_stocks, n_months)
+    y_reshape = Y_full.reshape(n_stocks, n_months)
 
 
-plot_ols_preds_per_stock(y_reshape, ols_tut_pred_reshape, n_stocks=n_stocks)
+    def plot_ols_preds_per_stock(y_reshape, ols_tut_pred_reshape, n_stocks=10):
+        n_cols = 2
+        n_rows = int(np.ceil(n_stocks / n_cols))
+
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 4 * n_rows), sharex=True, sharey=True)
+        axes = axes.flatten()
+
+        for i in range(n_stocks):
+            ax = axes[i]
+            ax.plot(y_reshape[i], label='Actual', color='blue', marker='o')
+            ax.plot(ols_tut_pred_reshape[i], label=f"{model} Predicted", color='red', linestyle='--', marker='x')
+            ax.set_title(f'Stock {i+1}')
+            ax.set_xlabel('Months')
+            ax.set_ylabel('Returns')
+            ax.legend()
+            ax.grid(False)
+        for j in range(n_stocks, len(axes)):
+            axes[j].axis('off')
+
+        plt.tight_layout()
+        plt.savefig(f"images/prediction/{model}_preds_all_stocks.png")
+
+
+    plot_ols_preds_per_stock(y_reshape, ols_tut_pred_reshape, n_stocks=n_stocks)
