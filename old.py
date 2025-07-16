@@ -34,24 +34,21 @@ np.random.seed(42)  # Set the random seed for reproducibility
 stock_characteristics = np.random.rand(n_stocks, n_months, n_characteristics)  # Generate random stock characteristic data
 macro_factors = np.random.rand(n_months, n_macro_factors)  # Generate random macroeconomic factor data
 
+
+# generate true coefficients
+true__betas = np.random.randn(n_characteristics)
+true_gammas = np.random.randn(n_macro_factors)
+
 # generate returns
-zi_t = np.zeros((n_stocks, n_months, n_characteristics * n_macro_factors)) 
-for j in range(n_months):
-    for i in range(n_stocks):
-        zi_t[i, j] = np.outer(macro_factors[j],stock_characteristics[i, j]).flatten() 
-
-theta = np.random.rand(n_characteristics * n_macro_factors)
-
-ri_t_plus_1 = np.zeros((n_stocks, n_months))
-for j in range(n_months):
-    for i in range(n_stocks):
-        ri_t_plus_1[i, j] = zi_t[i, j].dot(theta) + np.random.normal(0, 0.05)
-        
-zi_t_flattened = zi_t.reshape(n_stocks * n_months, -1)
-ri_t_flattened = ri_t_plus_1.flatten()
-
-X_full = zi_t_flattened
-Y_full = ri_t_flattened
+noise = np.random.normal(0, 0.5, (n_stocks, n_months))
+ri_t = np.zeros((n_stocks, n_months))
+for i in range(n_stocks):
+    for j in range(n_months):
+        ri_t[i, j] = (
+            stock_characteristics[i, j, :] @ true__betas
+            + macro_factors[j, :] @ true_gammas
+            + noise[i, j]
+        )
 
 '''# plot the return series for every stock
 n_rows = int(np.ceil(n_stocks / 2))
@@ -66,6 +63,13 @@ for j in range(n_stocks, len(axes)):
     axes[j].axis('off')
 plt.tight_layout()
 plt.savefig("images/ReturnTimeSeriesAll.png")'''
+
+# flatten data for modeling
+zi_t_flattened = stock_characteristics.reshape(-1, n_characteristics)
+xi_t_flattened = np.repeat(macro_factors, n_stocks, axis=0)
+ri_t_flattened = ri_t.flatten()
+X_full = np.hstack([zi_t_flattened, xi_t_flattened])
+Y_full = ri_t_flattened
 
 
 # -------------------------------
