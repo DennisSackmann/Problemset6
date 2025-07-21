@@ -15,7 +15,7 @@ from sklearn.metrics import mean_squared_error, r2_score  # Import metrics for e
 from sklearn.linear_model import LinearRegression, HuberRegressor, ElasticNet  # Import linear regression models
 from sklearn.decomposition import PCA  # Import PCA for dimensionality reduction
 from sklearn.cross_decomposition import PLSRegression  # Import PLSRegression for partial least squares regression
-from sklearn.preprocessing import SplineTransformer  # Import SplineTransformer for spline feature transformation
+from sklearn.preprocessing import SplineTransformer, StandardScaler  # Import SplineTransformer for spline feature transformation
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor  # Import ensemble regression models
 from scipy.stats import t # Import t-distribution for statistical tests
 
@@ -113,7 +113,7 @@ elastic.fit(X_train, Y_train)
 
 # --- Principal Component Regression (PCR) ---
 
-pca = PCA(n_components=5)
+pca = PCA(n_components=min(n_macro_factors * n_characteristics, 20))
 X_train_pca = pca.fit_transform(X_train)
 pcr = LinearRegression()
 pcr.fit(X_train_pca, Y_train)
@@ -396,3 +396,4 @@ for model in ols_models:
 
 
     plot_ols_preds_per_stock(y_reshape, ols_tut_pred_reshape, n_stocks=n_stocks)
+    
