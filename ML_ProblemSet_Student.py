@@ -17,6 +17,7 @@ from sklearn.decomposition import PCA  # Import PCA for dimensionality reduction
 from sklearn.cross_decomposition import PLSRegression  # Import PLSRegression for partial least squares regression
 from sklearn.preprocessing import SplineTransformer  # Import SplineTransformer for spline feature transformation
 from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor  # Import ensemble regression models
+from scipy.stats import t  # Import t-distribution for statistical tests
 
 plt.style.use('seaborn-v0_8-whitegrid')  # Set the plotting style to Seaborn whitegrid
 plt.rcParams['figure.figsize'] = (12, 8)  # Set default figure size for plots to 12x8 inches
@@ -277,7 +278,7 @@ def predict_all_models(X):
         "PLS": pls_model.predict(X).flatten(),
         "GLM": glm_model.predict(glm_spline_transformer.transform(X)),
         "Neural Network": nn_model.predict(X).flatten(),
-        "Gradient Boosting": brt_model.predict(X),
+        "Boosted Regression Trees": brt_model.predict(X),
         "Random Forest": rf_model.predict(X)
     }
 
@@ -318,16 +319,160 @@ for model, preds in prediciton_full_sample.items():
 # -------------------------------
 # Part 6: Out-of-Sample R² Results Table - to evaluate model performance
 # -------------------------------
-# TODO: Calculate R² according to the formula: 1 - (sum of squared errors / total sum of squares)
+def calc_r2(Y_true, Y_pred):
+    ss_res = np.sum((Y_true - Y_pred) ** 2)
+    ss_tot = np.sum(Y_true** 2)
+    return 1 - (ss_res / ss_tot)
+
+r2_test_results = {name: calc_r2(Y_test, pred) for name, pred in prediction.items()}
+r2_test_df = pd.DataFrame.from_dict(r2_test_results, orient='index', columns=['R²']).to_csv("data/r2_results.csv", index=True)
 
 # -------------------------------
 # Part 7: Diebold-Mariano Test Statistics - to compare model predictions
 # -------------------------------
+def diebold_mariano_test(Y_true, pred_1, pred_2):
+    """
+    Perform the Diebold-Mariano test for comparing two predictive models.
+    
+    Parameters:
+    Y_true : array-like
+        True values of the dependent variable.
+    pred_1 : array-like
+        Predictions from the first model.
+    pred_2 : array-like
+        Predictions from the second model.
+    
+    Returns:
+    dm_statistic : float
+        Diebold-Mariano test statistic.
+    p_value : float
+        p-value of the Diebold-Mariano test.
+    """
+    e1 = Y_true - pred_1
+    e2 = Y_true - pred_2
+    diff = e1 ** 2 - e2 ** 2
+    dm_statistic = np.mean(diff) / np.sqrt(np.var(diff) / len(Y_true))
+    p_value = 2 * (1 - t.cdf(np.abs(dm_statistic), df=len(diff)-1))
+    return dm_statistic, p_value
+
+def compare_models(Y_true, predictions):
+    df_diebold_mariano = pd.DataFrame(columns=['Model1', 'Model2', 'DM Statistic', 'p-value'])
+    models = list(predictions.keys())
+    for i in range(len(models)):
+        for j in range(len(models)):
+            model1 = models[i]
+            model2 = models[j]
+            dm_statistic, p_value = diebold_mariano_test(Y_true, predictions[model1], predictions[model2])
+            df_diebold_mariano = df_diebold_mariano._append({
+                'Model1': model1,
+                'Model2': model2,
+                'DM Statistic': dm_statistic,
+                'p-value': p_value
+            }, ignore_index=True)
+    return df_diebold_mariano
+
+df_dm = compare_models(Y_test, prediction)
+df_dm.to_csv("data/diebold_mariano_results.csv", index=False)
+
+# Show the results in a heatmap
+
+# Pivot to matrix form
+heatmap_matrix = np.empty((len(df_dm['Model1'].unique()), len(df_dm['Model2'].unique())), dtype=object)
+model_names = df_dm['Model1'].unique()
+
+for i, m1 in enumerate(model_names):
+    for j, m2 in enumerate(model_names):
+        if i == j:
+            heatmap_matrix[i, j] = 'white'
+            continue
+        row = df_dm[(df_dm['Model1'] == m1) & (df_dm['Model2'] == m2)]
+        pval = row['p-value'].values[0]
+        dmstat = row['DM Statistic'].values[0]
+        if pval > 0.05:
+            heatmap_matrix[i, j] = 'white'
+        elif pval <= 0.05 and dmstat < 0:
+            heatmap_matrix[i, j] = 'green'
+        else:
+            heatmap_matrix[i, j] = 'red'
+
+# Convert color matrix to numeric for plotting
+color_map = {'white': 0, 'green': 1, 'red': 2}
+numeric_matrix = np.vectorize(color_map.get)(heatmap_matrix)
+
+# Plot heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(numeric_matrix, annot=False, cmap=sns.color_palette(['white', 'green', 'red']), 
+            xticklabels=model_names, yticklabels=model_names, cbar=False)
+plt.title('Diebold-Mariano Test Heatmap')
+plt.xlabel('Model 2')
+plt.ylabel('Model 1')
+plt.tight_layout()
+plt.savefig("images/diebold/diebold_mariano_heatmap.png")
+
 # -------------------------------
 # Part 8: Variable Importance Calculations & Heatmaps - to understand feature importance ( to see which features are more important)
 # -------------------------------
-# TODO: Define a function to compute variable importance based on the drop in R² when a feature is removed
+def variable_importance(X, Y, prediction):
+    base_r2 = {name: calc_r2(Y, pred) for name, pred in prediction.items()}
+    importance = {}
+    for i in range(X.shape[1]):
+        X_zerod = X.copy()
+        X_zerod.iloc[:, i] = 0
+        pred_drop = predict_all_models(X_zerod)
+        r2_drop = {name: calc_r2(Y, pred) for name, pred in pred_drop.items()}
+        importance[f'Var{i+1}'] = {name: base_r2[name] - r2_drop[name] for name in base_r2}
+    return pd.DataFrame(importance).T
+
+importance_df = variable_importance(X_test, Y_test, prediction)
+importance_df.to_csv("data/variable_importance_results.csv", index=True)
+
+sns.heatmap(importance_df, annot=True, cmap='viridis', xticklabels=importance_df.columns, yticklabels=importance_df.index)
+plt.title('Variable Importance (Drop in R²) for All Models')
+plt.tight_layout()
+plt.savefig("images/variable_importance/variable_importance_all_models.png")
+plt.close()
+
+for col in importance_df.columns:
+    plt.figure(figsize=(10, 6))
+    sns.heatmap(importance_df[[col]].T, annot=True, cmap="viridis", cbar=True, fmt=".4f")
+    plt.title(f'Variable Importance for {col}')
+    plt.xlabel('Variables')
+    plt.ylabel('Drop in R²')
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    plt.savefig(f"images/variable_importance/variable_importance_{col}.png")
+    plt.close()
+
 # -------------------------------
 # -------------------------------
 # Part 9: Auxiliary Functions and Decile Portfolio Analysis - to analyze model performance across deciles - to compare predicted vs actual  sharpe ratios
 # -------------------------------
+def decile_portfolio_analysis(Y_true, Y_pred):
+    df = pd.DataFrame({'Actual': Y_true, 'Predicted': Y_pred})
+    df['Decile'] = pd.qcut(df['Predicted'], 10, labels=False)
+    results = df.groupby('Decile').agg({'Actual': ['mean', 'std'], 'Predicted': ['mean', 'std']})
+    results['Sharpe_Actual'] = results['Actual']['mean'] / results['Actual']['std']
+    results['Sharpe_Predicted'] = results['Predicted']['mean'] / results['Predicted']['std']
+    return results
+
+
+def plot_pred_vs_actual(results_df, name):
+    plt.figure(figsize=(10, 6))
+    actual = results_df['Actual']['mean']
+    predicted = results_df['Predicted']['mean']
+    
+    plt.plot(actual.index, actual.values, marker='o', label='Tatsächliche Rendite')
+    plt.plot(predicted.index, predicted.values, marker='x', label='Vorhergesagte Rendite')
+    
+    plt.title(f"Prediction vs. actual Return for each decil for {name}")
+    plt.xlabel("Decile")
+    plt.ylabel("Return")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(f"images/decile/pred_vs_actual_{name}.png")
+
+for name in list(prediction.keys()):
+    df_decile = decile_portfolio_analysis(Y_test, prediction[name])
+    df_decile.to_csv(f"data/decile_analysis_{name}.csv")
+    plot_pred_vs_actual(df_decile, name)
