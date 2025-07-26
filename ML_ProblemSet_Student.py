@@ -267,10 +267,53 @@ rf_model = rf_best_model
 # -------------------------------
 # Part 4: Prediction Wrappers
 # -------------------------------
+def predict_all_models(X):
+    return {
+        "OLS": ols_model.predict(X),
+        "Weighted OLS": weighted_ols_model.predict(X),
+        "Huber": huber_model.predict(X),
+        "ElasticNet": elastic_net_model.predict(X),
+        "PCR": lr_pcr_model.predict(pca_model.transform(X)),
+        "PLS": pls_model.predict(X).flatten(),
+        "GLM": glm_model.predict(glm_spline_transformer.transform(X)),
+        "Neural Network": nn_model.predict(X).flatten(),
+        "Gradient Boosting": brt_model.predict(X),
+        "Random Forest": rf_model.predict(X)
+    }
+
+prediction = predict_all_models(X_test)
 
 # -------------------------------
 # Part 5: Full-Sample Time Series Plots - to see the predictions vs. actuals
 # -------------------------------
+prediciton_full_sample = predict_all_models(X_full)
+
+for model, preds in prediciton_full_sample.items():
+    preds_reshape = preds.reshape(n_stocks, n_months)
+    y_reshape = Y_full.values.reshape(n_stocks, n_months)
+
+    n_cols = 2
+    n_rows = int(np.ceil(n_stocks / n_cols))
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(12, 4*n_rows), sharex=True, sharey=True)
+    axes = axes.flatten()
+
+    for i in range(n_stocks):
+            ax = axes[i]
+            ax.plot(y_reshape[i], label='Actual', color='blue', marker='o')
+            ax.plot(preds_reshape[i], label=f"{model} Predicted", color='red', linestyle='--', marker='x')
+            ax.set_title(f'Stock {i+1}')
+            ax.set_xlabel('Months')
+            ax.set_ylabel('Returns')
+            ax.legend()
+            ax.grid(False)
+
+    for j in range(n_stocks, len(axes)):
+        axes[j].axis('off')
+
+    plt.tight_layout()
+    plt.savefig(f"images/prediction/{model}_full_sample_prediction_comparison.png")
+
 
 # -------------------------------
 # Part 6: Out-of-Sample R² Results Table - to evaluate model performance
